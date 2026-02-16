@@ -112,8 +112,13 @@ class Grid:
                     # Same green base for grass underneath
                     color = (34, 139, 34)
                 elif tile.tile_type == TileType.UNOWNED:
-                    # Dark gray
-                    color = (40, 40, 40)
+                    # Check if this is a purchasable tile (adjacent to owned)
+                    if self._is_purchasable(x, y):
+                        # Lighter gray for purchasable tiles
+                        color = (60, 60, 60)
+                    else:
+                        # Dark gray for non-purchasable
+                        color = (40, 40, 40)
                 
                 # Draw the tile
                 pygame.draw.rect(
@@ -128,6 +133,16 @@ class Grid:
                     pygame.draw.rect(
                         surface,
                         border_color,
+                        (screen_x, screen_y, tile_size, tile_size),
+                        1
+                    )
+                
+                # Draw subtle highlight border for purchasable unowned tiles
+                if tile.tile_type == TileType.UNOWNED and self._is_purchasable(x, y):
+                    highlight_color = (100, 100, 120)
+                    pygame.draw.rect(
+                        surface,
+                        highlight_color,
                         (screen_x, screen_y, tile_size, tile_size),
                         1
                     )
@@ -192,3 +207,25 @@ class Grid:
             (center_x + 2, center_y - 5),
             1
         )
+
+    def _is_purchasable(self, x, y):
+        """Check if an unowned tile is purchasable (adjacent to owned tiles)
+        
+        Args:
+            x, y: Tile coordinates
+            
+        Returns:
+            True if tile is unowned and adjacent to at least one owned tile
+        """
+        tile = self.get_tile(x, y)
+        if not tile or tile.tile_type != TileType.UNOWNED:
+            return False
+        
+        # Check all four adjacent tiles (not diagonals)
+        directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+        for dx, dy in directions:
+            neighbor = self.get_tile(x + dx, y + dy)
+            if neighbor and neighbor.is_owned():
+                return True
+        
+        return False

@@ -73,6 +73,9 @@ class Game:
             # Chop action
             elif event.key == pygame.K_SPACE:
                 self.player.try_chop(CHOP_COOLDOWN)
+            # Buy tile
+            elif event.key == pygame.K_b:
+                self._try_purchase_adjacent_tile()
         
         elif event.type == pygame.MOUSEBUTTONDOWN:
             # Left click to chop
@@ -210,3 +213,50 @@ class Game:
         tiles_text = f"Tiles: {owned_tiles} ({grass_tiles} grass, {weed_tiles} weeds)"
         tiles_surface = font.render(tiles_text, True, text_color)
         surface.blit(tiles_surface, (x_margin, y_pos + 16))
+        
+        # Purchase cost display if on border facing unowned tile
+        purchasable_tile = self._get_purchasable_tile()
+        if purchasable_tile:
+            cost = self.economy.get_next_tile_cost()
+            can_afford = self.economy.can_afford_tile()
+            cost_color = (50, 255, 50) if can_afford else (255, 50, 50)
+            cost_text = f"Press B to buy tile: ${cost}"
+            cost_surface = font.render(cost_text, True, cost_color)
+            # Position at bottom of screen
+            surface.blit(cost_surface, (x_margin, INTERNAL_HEIGHT - 20))
+
+    def _get_purchasable_tile(self):
+        """Get the coordinates of a purchasable tile adjacent to the player
+        
+        Returns:
+            Tuple (x, y) of purchasable tile, or None if no valid tile
+        """
+        # Check all four directions from player
+        directions = [
+            (0, -1),  # Up
+            (0, 1),   # Down
+            (-1, 0),  # Left
+            (1, 0)    # Right
+        ]
+        
+        for dx, dy in directions:
+            tile_x = self.player.x + dx
+            tile_y = self.player.y + dy
+            tile = self.grid.get_tile(tile_x, tile_y)
+            
+            # Check if tile is unowned and has at least one owned neighbor
+            if tile and tile.tile_type == TileType.UNOWNED:
+                # Verify it's adjacent to owned tiles (should be, since player is owned)
+                if self.economy._is_adjacent_to_owned(tile_x, tile_y):
+                    return (tile_x, tile_y)
+        
+        return None
+
+    def _try_purchase_adjacent_tile(self):
+        """Attempt to purchase a tile adjacent to the player"""
+        purchasable_tile = self._get_purchasable_tile()
+        if purchasable_tile:
+            x, y = purchasable_tile
+            success = self.economy.try_purchase_tile(x, y)
+            if success:
+                pass  # Could add success feedback/sound here
