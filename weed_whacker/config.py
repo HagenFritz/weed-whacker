@@ -21,6 +21,6 @@ CHOP_COOLDOWN = 1000            # ms
 WEED_SPAWN_INTERVAL = 5000      # ms
 
 # Economy
-INCOME_PER_TILE_PER_SECOND = 1  # dollars
+INCOME_PER_TILE_PER_SECOND = 0.01  # dollars
 TILE_BASE_COST = 10             # first tile costs this
 TILE_COST_INCREMENT = 1         # each subsequent tile costs this much more

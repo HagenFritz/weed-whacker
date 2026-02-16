@@ -109,7 +109,7 @@ class Grid:
                         max(0, base_green[2] - variation)
                     )
                 elif tile.tile_type == TileType.WEED:
-                    # Same green base (will add weed sprite on top later)
+                    # Same green base for grass underneath
                     color = (34, 139, 34)
                 elif tile.tile_type == TileType.UNOWNED:
                     # Dark gray
@@ -131,3 +131,64 @@ class Grid:
                         (screen_x, screen_y, tile_size, tile_size),
                         1
                     )
+                
+                # Draw weed sprite on WEED tiles
+                if tile.tile_type == TileType.WEED:
+                    self._draw_weed_sprite(surface, screen_x, screen_y, tile_size)
+
+    def _draw_weed_sprite(self, surface, x, y, tile_size):
+        """Draw a simple pixel weed sprite on a tile
+        
+        Args:
+            surface: Pygame surface to render to
+            x, y: Top-left corner of the tile in pixels
+            tile_size: Size of the tile in pixels
+        """
+        # Weed colors - darker green/brown
+        stem_color = (60, 80, 40)
+        leaf_color = (80, 120, 60)
+        
+        center_x = x + tile_size // 2
+        center_y = y + tile_size // 2
+        
+        # Draw stem (vertical line)
+        pygame.draw.line(
+            surface,
+            stem_color,
+            (center_x, center_y + 2),
+            (center_x, center_y - 4),
+            2
+        )
+        
+        # Draw leaves (small diagonal lines)
+        # Left leaf
+        pygame.draw.line(
+            surface,
+            leaf_color,
+            (center_x, center_y - 1),
+            (center_x - 3, center_y - 3),
+            1
+        )
+        # Right leaf
+        pygame.draw.line(
+            surface,
+            leaf_color,
+            (center_x, center_y - 1),
+            (center_x + 3, center_y - 3),
+            1
+        )
+        # Top leaves
+        pygame.draw.line(
+            surface,
+            leaf_color,
+            (center_x, center_y - 3),
+            (center_x - 2, center_y - 5),
+            1
+        )
+        pygame.draw.line(
+            surface,
+            leaf_color,
+            (center_x, center_y - 3),
+            (center_x + 2, center_y - 5),
+            1
+        )
