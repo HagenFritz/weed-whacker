@@ -4,9 +4,13 @@ Weed Whacker - Main Game State and Loop Logic
 
 import pygame
 import random
-from .grid import Grid, TileType
-from .player import Player
-from .economy import Economy
+from .game.grid import Grid, TileType
+from .game.player import Player
+from .game.economy import Economy
+from .ui.hud import UI
+from .render.grid_renderer import GridRenderer
+from .render.player_renderer import PlayerRenderer
+from ..assets.managers.asset_manager import AssetManager
 from ..config import (
     TILE_SIZE,
     INTERNAL_WIDTH,
@@ -28,6 +32,16 @@ class Game:
     def __init__(self):
         """Initialize game state"""
         self.running = True
+        
+        # Initialize asset manager
+        self.asset_manager = AssetManager(TILE_SIZE)
+        
+        # Initialize renderers
+        self.grid_renderer = GridRenderer(self.asset_manager)
+        self.player_renderer = PlayerRenderer(self.asset_manager)
+        
+        # Initialize UI
+        self.ui = UI()
         
         # Initialize grid
         self.grid = Grid(WORLD_GRID_SIZE, STARTING_GRID_SIZE)
@@ -56,7 +70,6 @@ class Game:
         # Weed spawning timer
         self.weed_spawn_timer = 0
         
-        # TODO: Initialize UI
 
     def handle_event(self, event):
         """Handle pygame events"""
@@ -75,7 +88,11 @@ class Game:
                 self.player.try_chop(CHOP_COOLDOWN)
             # Buy tile
             elif event.key == pygame.K_b:
-                self._try_purchase_adjacent_tile()
+                self._try_purchase_selected_tile()
+            # Cycle through purchasable tiles
+            elif event.key == pygame.K_TAB:
+                purchasable_tiles = self._get_all_purchasable_tiles()
+                self.ui.cycle_selected_tile(1, len(purchasable_tiles))
         
         elif event.type == pygame.MOUSEBUTTONDOWN:
             # Left click to chop
@@ -109,17 +126,32 @@ class Game:
         # Clear screen
         surface.fill((0, 0, 0))
 
-        # Render grid
-        self.grid.render(surface, TILE_SIZE, self.camera_offset)
+        # Render grid using renderer
+        self.grid_renderer.render(surface, self.grid, TILE_SIZE, self.camera_offset)
         
-        # Render player
-        self.player.render(surface, TILE_SIZE, self.camera_offset)
+        # Render player using renderer
+        self.player_renderer.render(surface, self.player, TILE_SIZE, self.camera_offset)
         
-        # Render chop cooldown indicator near player
-        self._render_chop_cooldown(surface)
+        # Render purchasable tile highlights
+        purchasable_tiles = self._get_all_purchasable_tiles()
+        for i, (tile_x, tile_y) in enumerate(purchasable_tiles):
+            is_selected = (i == self.ui.get_selected_index())
+            self.ui.render_tile_highlight(surface, tile_x, tile_y, TILE_SIZE, self.camera_offset, is_selected)
         
-        # Render UI
-        self._render_ui(surface)
+        # Render chop cooldown indicator using renderer
+        self.player_renderer.render_cooldown(surface, self.player, TILE_SIZE, self.camera_offset)
+        
+        # Render UI/HUD
+        money = self.economy.get_money_display()
+        income_rate = self.economy.get_income_rate()
+        owned_tiles = self.economy.get_owned_tile_count()
+        self.ui.render_hud(surface, money, income_rate, owned_tiles)
+        
+        # Render purchase UI if tiles available
+        if purchasable_tiles:
+            cost = self.economy.get_next_tile_cost()
+            can_afford = self.economy.can_afford_tile()
+            self.ui.render_purchase_ui(surface, purchasable_tiles, cost, can_afford, INTERNAL_HEIGHT)
 
     def _spawn_weed(self):
         """Spawn a weed on a random GRASS tile"""
@@ -136,101 +168,14 @@ class Game:
             x, y = random.choice(grass_tiles)
             self.grid.get_tile(x, y).tile_type = TileType.WEED
 
-    def _render_chop_cooldown(self, surface):
-        """Render the chop cooldown indicator near the player
-        
-        Args:
-            surface: Pygame surface to render to
-        """
-        # Get cooldown percentage (0.0 = ready, 1.0 = just chopped)
-        cooldown_percent = self.player.chop_cooldown / CHOP_COOLDOWN if self.player.chop_cooldown > 0 else 0.0
-        
-        # Calculate player screen position
-        player_screen_x = self.player.x * TILE_SIZE - self.camera_offset[0]
-        player_screen_y = self.player.y * TILE_SIZE - self.camera_offset[1]
-        
-        # Draw cooldown bar below the player
-        bar_width = TILE_SIZE - 4
-        bar_height = 3
-        bar_x = player_screen_x + 2
-        bar_y = player_screen_y + TILE_SIZE + 1
-        
-        # Background (empty bar)
-        bg_color = (60, 60, 60)
-        pygame.draw.rect(surface, bg_color, (bar_x, bar_y, bar_width, bar_height))
-        
-        # Foreground (filled portion based on cooldown)
-        if cooldown_percent > 0:
-            # Red when cooling down
-            fill_color = (200, 50, 50)
-            fill_width = int(bar_width * (1.0 - cooldown_percent))
-        else:
-            # Green when ready
-            fill_color = (50, 200, 50)
-            fill_width = bar_width
-        
-        if fill_width > 0:
-            pygame.draw.rect(surface, fill_color, (bar_x, bar_y, fill_width, bar_height))
-
-    def _render_ui(self, surface):
-        """Render the UI/HUD displaying game stats
-        
-        Args:
-            surface: Pygame surface to render to
-        """
-        # Initialize font if needed
-        if not hasattr(pygame.font, '_initialized') or not pygame.font.get_init():
-            pygame.font.init()
-        
-        # Use default font, small size
-        font = pygame.font.Font(None, 20)
-        
-        # Get stats
-        money = self.economy.get_money_display()
-        income_rate = self.economy.get_income_rate()
-        owned_tiles = self.economy.get_owned_tile_count()
-        grass_tiles = self.grid.count_tiles_by_type(TileType.GRASS)
-        weed_tiles = self.grid.count_tiles_by_type(TileType.WEED)
-        
-        # Text color
-        text_color = (255, 255, 255)
-        
-        # Position for UI elements at top of screen
-        y_pos = 4
-        x_margin = 4
-        
-        # Money display
-        money_text = f"Money: ${money}"
-        money_surface = font.render(money_text, True, text_color)
-        surface.blit(money_surface, (x_margin, y_pos))
-        
-        # Income rate display
-        income_text = f"Income: ${income_rate}/sec"
-        income_surface = font.render(income_text, True, text_color)
-        surface.blit(income_surface, (x_margin + 100, y_pos))
-        
-        # Tile count display
-        tiles_text = f"Tiles: {owned_tiles} ({grass_tiles} grass, {weed_tiles} weeds)"
-        tiles_surface = font.render(tiles_text, True, text_color)
-        surface.blit(tiles_surface, (x_margin, y_pos + 16))
-        
-        # Purchase cost display if on border facing unowned tile
-        purchasable_tile = self._get_purchasable_tile()
-        if purchasable_tile:
-            cost = self.economy.get_next_tile_cost()
-            can_afford = self.economy.can_afford_tile()
-            cost_color = (50, 255, 50) if can_afford else (255, 50, 50)
-            cost_text = f"Press B to buy tile: ${cost}"
-            cost_surface = font.render(cost_text, True, cost_color)
-            # Position at bottom of screen
-            surface.blit(cost_surface, (x_margin, INTERNAL_HEIGHT - 20))
-
-    def _get_purchasable_tile(self):
-        """Get the coordinates of a purchasable tile adjacent to the player
+    def _get_all_purchasable_tiles(self):
+        """Get all coordinates of purchasable tiles adjacent to the player
         
         Returns:
-            Tuple (x, y) of purchasable tile, or None if no valid tile
+            List of (x, y) tuples for all purchasable tiles
         """
+        purchasable = []
+        
         # Check all four directions from player
         directions = [
             (0, -1),  # Up
@@ -248,15 +193,22 @@ class Game:
             if tile and tile.tile_type == TileType.UNOWNED:
                 # Verify it's adjacent to owned tiles (should be, since player is owned)
                 if self.economy._is_adjacent_to_owned(tile_x, tile_y):
-                    return (tile_x, tile_y)
+                    purchasable.append((tile_x, tile_y))
         
-        return None
+        return purchasable
 
-    def _try_purchase_adjacent_tile(self):
-        """Attempt to purchase a tile adjacent to the player"""
-        purchasable_tile = self._get_purchasable_tile()
-        if purchasable_tile:
-            x, y = purchasable_tile
+    def _try_purchase_selected_tile(self):
+        """Attempt to purchase the currently selected tile"""
+        purchasable_tiles = self._get_all_purchasable_tiles()
+        
+        if not purchasable_tiles:
+            return
+        
+        # Get selected tile
+        selected_index = self.ui.get_selected_index()
+        if selected_index < len(purchasable_tiles):
+            x, y = purchasable_tiles[selected_index]
             success = self.economy.try_purchase_tile(x, y)
             if success:
-                pass  # Could add success feedback/sound here
+                # Reset selection after successful purchase
+                self.ui.reset_selection()

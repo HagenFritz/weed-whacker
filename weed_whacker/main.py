@@ -4,7 +4,7 @@ Weed Whacker - Main Entry Point
 
 import pygame
 import sys
-from .src.game import Game
+from .src.game_manager import Game
 from .config import INTERNAL_WIDTH, INTERNAL_HEIGHT, SCALE_FACTOR
 
 

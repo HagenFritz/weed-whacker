@@ -2,7 +2,6 @@
 Weed Whacker - Grid and Tile Management
 """
 
-import pygame
 from enum import Enum
 
 
@@ -82,13 +81,14 @@ class Grid:
                     count += 1
         return count
 
-    def render(self, surface, tile_size, camera_offset=(0, 0)):
+    def render(self, surface, tile_size, camera_offset=(0, 0), sprite_manager=None):
         """Render the grid to a surface
 
         Args:
             surface: Pygame surface to render to
             tile_size: Size of each tile in pixels
             camera_offset: (x, y) camera offset in pixels for future scrolling
+            sprite_manager: SpriteManager instance for rendering sprites
         """
         for y in range(self.world_size):
             for x in range(self.world_size):
@@ -98,115 +98,26 @@ class Grid:
                 screen_x = x * tile_size - camera_offset[0]
                 screen_y = y * tile_size - camera_offset[1]
                 
-                # Choose color based on tile type
-                if tile.tile_type == TileType.GRASS:
-                    # Green with slight variation for texture
-                    base_green = (34, 139, 34)
-                    variation = ((x + y) % 3) * 8
-                    color = (
-                        max(0, base_green[0] - variation),
-                        max(0, base_green[1] - variation),
-                        max(0, base_green[2] - variation)
-                    )
-                elif tile.tile_type == TileType.WEED:
-                    # Same green base for grass underneath
-                    color = (34, 139, 34)
+                # Render base tile
+                if tile.tile_type == TileType.GRASS or tile.tile_type == TileType.WEED:
+                    # Use variation based on tile position for visual variety
+                    variation = (x + y) % 3
+                    grass_sprite = f'grass_{variation}'
+                    if sprite_manager:
+                        sprite_manager.render_sprite(surface, grass_sprite, screen_x, screen_y)
                 elif tile.tile_type == TileType.UNOWNED:
-                    # Check if this is a purchasable tile (adjacent to owned)
+                    # Check if this is a purchasable tile
                     if self._is_purchasable(x, y):
-                        # Lighter gray for purchasable tiles
-                        color = (60, 60, 60)
+                        sprite_name = 'unowned_purchasable'
                     else:
-                        # Dark gray for non-purchasable
-                        color = (40, 40, 40)
+                        sprite_name = 'unowned'
+                    if sprite_manager:
+                        sprite_manager.render_sprite(surface, sprite_name, screen_x, screen_y)
                 
-                # Draw the tile
-                pygame.draw.rect(
-                    surface,
-                    color,
-                    (screen_x, screen_y, tile_size, tile_size)
-                )
-                
-                # Draw subtle border for owned tiles
-                if tile.is_owned():
-                    border_color = (25, 100, 25)
-                    pygame.draw.rect(
-                        surface,
-                        border_color,
-                        (screen_x, screen_y, tile_size, tile_size),
-                        1
-                    )
-                
-                # Draw subtle highlight border for purchasable unowned tiles
-                if tile.tile_type == TileType.UNOWNED and self._is_purchasable(x, y):
-                    highlight_color = (100, 100, 120)
-                    pygame.draw.rect(
-                        surface,
-                        highlight_color,
-                        (screen_x, screen_y, tile_size, tile_size),
-                        1
-                    )
-                
-                # Draw weed sprite on WEED tiles
+                # Render weed overlay on top of grass
                 if tile.tile_type == TileType.WEED:
-                    self._draw_weed_sprite(surface, screen_x, screen_y, tile_size)
-
-    def _draw_weed_sprite(self, surface, x, y, tile_size):
-        """Draw a simple pixel weed sprite on a tile
-        
-        Args:
-            surface: Pygame surface to render to
-            x, y: Top-left corner of the tile in pixels
-            tile_size: Size of the tile in pixels
-        """
-        # Weed colors - darker green/brown
-        stem_color = (60, 80, 40)
-        leaf_color = (80, 120, 60)
-        
-        center_x = x + tile_size // 2
-        center_y = y + tile_size // 2
-        
-        # Draw stem (vertical line)
-        pygame.draw.line(
-            surface,
-            stem_color,
-            (center_x, center_y + 2),
-            (center_x, center_y - 4),
-            2
-        )
-        
-        # Draw leaves (small diagonal lines)
-        # Left leaf
-        pygame.draw.line(
-            surface,
-            leaf_color,
-            (center_x, center_y - 1),
-            (center_x - 3, center_y - 3),
-            1
-        )
-        # Right leaf
-        pygame.draw.line(
-            surface,
-            leaf_color,
-            (center_x, center_y - 1),
-            (center_x + 3, center_y - 3),
-            1
-        )
-        # Top leaves
-        pygame.draw.line(
-            surface,
-            leaf_color,
-            (center_x, center_y - 3),
-            (center_x - 2, center_y - 5),
-            1
-        )
-        pygame.draw.line(
-            surface,
-            leaf_color,
-            (center_x, center_y - 3),
-            (center_x + 2, center_y - 5),
-            1
-        )
+                    if sprite_manager:
+                        sprite_manager.render_sprite(surface, 'weed_basic', screen_x, screen_y)
 
     def _is_purchasable(self, x, y):
         """Check if an unowned tile is purchasable (adjacent to owned tiles)

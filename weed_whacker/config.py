@@ -4,10 +4,19 @@ All tunable constants for easy balancing
 """
 
 # Display settings
-TILE_SIZE = 16
-INTERNAL_WIDTH = 320
-INTERNAL_HEIGHT = 240
-SCALE_FACTOR = 3
+# Tile size in pixels (asset resolution)
+TILE_SIZE = 64
+
+# Viewport settings (how many tiles fit on screen)
+VIEWPORT_WIDTH_TILES = 20  # Number of tiles visible horizontally
+VIEWPORT_HEIGHT_TILES = 15  # Number of tiles visible vertically
+
+# Calculated internal resolution based on viewport
+INTERNAL_WIDTH = VIEWPORT_WIDTH_TILES * TILE_SIZE
+INTERNAL_HEIGHT = VIEWPORT_HEIGHT_TILES * TILE_SIZE
+
+# Window scale factor (scales up internal resolution for crisp pixels)
+SCALE_FACTOR = 1  # Final window will be INTERNAL_WIDTH * SCALE_FACTOR
 
 # Grid settings
 STARTING_GRID_SIZE = 5

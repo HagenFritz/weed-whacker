@@ -22,6 +22,10 @@ class Player:
         # Cooldowns
         self.move_cooldown = 0
         self.chop_cooldown = 0
+        
+        # Current equipped tool
+        self.current_tool = 'hand_hoe_stone'  # Default starting tool
+        # TODO: Implement tool inventory and equipment system for store purchases
 
     def update(self, dt):
         """Update player state
@@ -93,32 +97,19 @@ class Player:
             return 0.0
         return self.chop_cooldown / 1000.0  # Assuming 1000ms cooldown
 
-    def render(self, surface, tile_size, camera_offset=(0, 0)):
+    def render(self, surface, tile_size, camera_offset=(0, 0), sprite_manager=None):
         """Render the player to a surface
 
         Args:
             surface: Pygame surface to render to
             tile_size: Size of each tile in pixels
             camera_offset: (x, y) camera offset in pixels
+            sprite_manager: SpriteManager instance for rendering sprites
         """
         # Calculate screen position
         screen_x = self.x * tile_size - camera_offset[0]
         screen_y = self.y * tile_size - camera_offset[1]
         
-        # Player color (bright blue for visibility)
-        player_color = (64, 164, 223)
-        
-        # Draw player as a slightly smaller square than the tile for visual clarity
-        padding = 2
-        player_rect = (
-            screen_x + padding,
-            screen_y + padding,
-            tile_size - padding * 2,
-            tile_size - padding * 2
-        )
-        
-        pygame.draw.rect(surface, player_color, player_rect)
-        
-        # Add a darker border
-        border_color = (40, 100, 140)
-        pygame.draw.rect(surface, border_color, player_rect, 1)
+        # Render the player sprite
+        if sprite_manager:
+            sprite_manager.render_sprite(surface, 'player', screen_x, screen_y)
