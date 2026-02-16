@@ -92,3 +92,33 @@ class Player:
         if self.chop_cooldown <= 0:
             return 0.0
         return self.chop_cooldown / 1000.0  # Assuming 1000ms cooldown
+
+    def render(self, surface, tile_size, camera_offset=(0, 0)):
+        """Render the player to a surface
+
+        Args:
+            surface: Pygame surface to render to
+            tile_size: Size of each tile in pixels
+            camera_offset: (x, y) camera offset in pixels
+        """
+        # Calculate screen position
+        screen_x = self.x * tile_size - camera_offset[0]
+        screen_y = self.y * tile_size - camera_offset[1]
+        
+        # Player color (bright blue for visibility)
+        player_color = (64, 164, 223)
+        
+        # Draw player as a slightly smaller square than the tile for visual clarity
+        padding = 2
+        player_rect = (
+            screen_x + padding,
+            screen_y + padding,
+            tile_size - padding * 2,
+            tile_size - padding * 2
+        )
+        
+        pygame.draw.rect(surface, player_color, player_rect)
+        
+        # Add a darker border
+        border_color = (40, 100, 140)
+        pygame.draw.rect(surface, border_color, player_rect, 1)
