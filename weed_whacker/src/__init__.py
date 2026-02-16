@@ -1,0 +1,3 @@
+"""
+Weed Whacker - Source Package
+"""
