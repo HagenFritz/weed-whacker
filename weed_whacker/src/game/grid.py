@@ -17,6 +17,11 @@ class Tile:
 
     def __init__(self, tile_type=TileType.UNOWNED):
         self.tile_type = tile_type
+        
+        # Weed state tracking
+        self.weed_type = None  # Weed instance (from weeds.py)
+        self.weed_health = 0.0  # Current health of the weed
+        self.last_movement_count = 0  # Player movement count when last damaged
 
     def is_owned(self):
         """Check if this tile is owned by the player"""

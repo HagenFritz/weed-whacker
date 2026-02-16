@@ -2,8 +2,7 @@
 Weed Whacker - Player Movement and Actions
 """
 
-import pygame
-
+from .grid import TileType
 
 class Player:
     """Player character with tile-based movement"""
@@ -24,8 +23,14 @@ class Player:
         self.chop_cooldown = 0
         
         # Current equipped tool
-        self.current_tool = 'hand_hoe_stone'  # Default starting tool
+        self.current_tool = 'scythe'  # Default starting tool
         # TODO: Implement tool inventory and equipment system for store purchases
+        
+        # Tool usage tracking
+        self.tool_uses = 0
+        
+        # Movement tracking for weed regrowth
+        self.movement_count = 0
 
     def update(self, dt):
         """Update player state
@@ -61,6 +66,7 @@ class Player:
             self.x = new_x
             self.y = new_y
             self.move_cooldown = move_cooldown_time
+            self.movement_count += 1  # Track movements for weed regrowth
             return True
 
         return False
@@ -72,16 +78,37 @@ class Player:
             chop_cooldown_time: Cooldown duration in ms
 
         Returns:
-            True if chop was successful
+            True if chop was successful (damage dealt)
         """
         if self.chop_cooldown > 0:
             return False
 
-        from .grid import TileType
-
         tile = self.grid.get_tile(self.x, self.y)
-        if tile and tile.tile_type == TileType.WEED:
-            tile.tile_type = TileType.GRASS
+        if tile and tile.tile_type == TileType.WEED and tile.weed_type:
+            from .tools import get_tool
+            
+            # Get current tool
+            tool = get_tool(self.current_tool)
+            
+            # Calculate regrowth since last damage
+            if tile.weed_health < tile.weed_type.toughness:
+                movements_since_damage = self.movement_count - tile.last_movement_count
+                regrowth_amount = movements_since_damage // tile.weed_type.regrow
+                tile.weed_health = min(tile.weed_type.toughness, tile.weed_health + regrowth_amount)
+            
+            # Deal damage based on tool efficiency
+            tile.weed_health -= tool.efficiency
+            tile.last_movement_count = self.movement_count
+            
+            # Increment tool usage counter
+            self.tool_uses += 1
+            
+            # Check if weed is destroyed
+            if tile.weed_health <= 0:
+                tile.tile_type = TileType.GRASS
+                tile.weed_type = None
+                tile.weed_health = 0.0
+            
             self.chop_cooldown = chop_cooldown_time
             return True
 

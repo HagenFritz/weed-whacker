@@ -24,13 +24,13 @@ class ToolManager(BaseAssetManager):
         icon_size = max(12, self.tile_size // 2)
         
         # Load actual tool assets
-        self.sprites['hand_hoe_stone'] = self._load_or_generate(
-            'hand_hoe_stone',
+        self.sprites['hand_hoe'] = self._load_or_generate(
+            'hand_hoe',
             self._generate_hoe,
             size=(icon_size, icon_size)
         )
-        self.sprites['scythe_iron'] = self._load_or_generate(
-            'scythe_iron',
+        self.sprites['scythe'] = self._load_or_generate(
+            'scythe',
             self._generate_scythe,
             size=(icon_size, icon_size)
         )

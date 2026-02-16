@@ -40,6 +40,8 @@ class BaseAssetManager:
         if sprite_path.exists():
             try:
                 loaded_sprite = pygame.image.load(str(sprite_path))
+                # Convert to preserve alpha channel for transparency
+                loaded_sprite = loaded_sprite.convert_alpha()
                 # Scale to desired size if needed
                 if loaded_sprite.get_size() != size:
                     return pygame.transform.scale(loaded_sprite, size)

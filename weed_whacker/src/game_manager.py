@@ -2,11 +2,13 @@
 Weed Whacker - Main Game State and Loop Logic
 """
 
-import pygame
+import pygame # type: ignore
 import random
+
 from .game.grid import Grid, TileType
 from .game.player import Player
 from .game.economy import Economy
+from .game.weeds import WEED_BASIC
 from .ui.hud import UI
 from .render.grid_renderer import GridRenderer
 from .render.player_renderer import PlayerRenderer
@@ -138,14 +140,11 @@ class Game:
             is_selected = (i == self.ui.get_selected_index())
             self.ui.render_tile_highlight(surface, tile_x, tile_y, TILE_SIZE, self.camera_offset, is_selected)
         
-        # Render chop cooldown indicator using renderer
-        self.player_renderer.render_cooldown(surface, self.player, TILE_SIZE, self.camera_offset)
-        
         # Render UI/HUD
         money = self.economy.get_money_display()
         income_rate = self.economy.get_income_rate()
         owned_tiles = self.economy.get_owned_tile_count()
-        self.ui.render_hud(surface, money, income_rate, owned_tiles)
+        self.ui.render_hud(surface, money, income_rate, owned_tiles, self.player, self.asset_manager)
         
         # Render purchase UI if tiles available
         if purchasable_tiles:
@@ -155,6 +154,7 @@ class Game:
 
     def _spawn_weed(self):
         """Spawn a weed on a random GRASS tile"""
+        
         # Collect all GRASS tiles
         grass_tiles = []
         for y in range(self.grid.world_size):
@@ -166,7 +166,11 @@ class Game:
         # If there are valid grass tiles, spawn on a random one
         if grass_tiles:
             x, y = random.choice(grass_tiles)
-            self.grid.get_tile(x, y).tile_type = TileType.WEED
+            tile = self.grid.get_tile(x, y)
+            tile.tile_type = TileType.WEED
+            tile.weed_type = WEED_BASIC
+            tile.weed_health = WEED_BASIC.toughness
+            tile.last_movement_count = self.player.movement_count
 
     def _get_all_purchasable_tiles(self):
         """Get all coordinates of purchasable tiles adjacent to the player
