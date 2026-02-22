@@ -1,0 +1,41 @@
+"""
+Centralized color definitions for the game.
+Colors are defined as RGB or RGBA tuples.
+"""
+
+# Base Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
+# UI General
+UI_TEXT = WHITE
+UI_TEXT_SHADOW = BLACK
+UI_LABEL = (180, 180, 200)
+OVERLAY_BG = (0, 0, 0, 150)
+PLACEHOLDER_TEXT = (150, 150, 150)
+CLOSE_TEXT = (200, 200, 200)
+FALLBACK_ICON = (150, 150, 150)
+STORE_ICON_FALLBACK = (150, 100, 50)
+STORE_INSTRUCTION = (150, 200, 255)
+INNER_HIGHLIGHT = (100, 100, 120)
+
+# Panels (HUD, Dialog, Store)
+PANEL_BG = (40, 40, 50, 200)
+PANEL_BORDER = (80, 80, 100)
+BAR_BG = (20, 20, 30)
+BAR_BORDER = (60, 60, 80)
+
+# Purchase Status
+AFFORDABLE = (100, 255, 100)
+AFFORDABLE_DARK = (50, 200, 50)
+UNAFFORDABLE = (255, 100, 100)
+UNAFFORDABLE_DARK = (200, 50, 50)
+
+# Cooldown Indicators
+COOLDOWN_COOLING = (220, 80, 60)
+COOLDOWN_READY = (80, 220, 80)
+BAR_BG_DARK = (40, 40, 40)
+
+# Highlights
+HIGHLIGHT_ACTIVE = (255, 255, 100)
+HIGHLIGHT_INACTIVE = (150, 150, 80)

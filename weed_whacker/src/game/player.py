@@ -7,27 +7,31 @@ from .grid import TileType
 class Player:
     """Player character with tile-based movement"""
 
-    def __init__(self, start_x, start_y, grid):
+    def __init__(self, start_x, start_y, grid, asset_manager=None):
         """Initialize player
 
         Args:
             start_x, start_y: Starting tile coordinates
             grid: Reference to the game grid
+            asset_manager: Asset manager for playing sounds
         """
         self.x = start_x
         self.y = start_y
         self.grid = grid
+        self.asset_manager = asset_manager
 
         # Cooldowns
         self.move_cooldown = 0
         self.chop_cooldown = 0
         
         # Current equipped tool
-        self.current_tool = 'scythe'  # Default starting tool
-        # TODO: Implement tool inventory and equipment system for store purchases
+        self.current_tool = 'hand_hoe'  # Default starting tool
         
-        # Tool usage tracking
-        self.tool_uses = 0
+        # Tools owned by the player
+        self.owned_tools = ['hand_hoe']
+        
+        # Tool usage tracking per tool
+        self.tool_uses = {'hand_hoe': 0}
         
         # Movement tracking for weed regrowth
         self.movement_count = 0
@@ -72,47 +76,69 @@ class Player:
         return False
 
     def try_chop(self, chop_cooldown_time):
-        """Attempt to chop weed on current tile
+        """Attempt to chop weeds based on current tool's reach
 
         Args:
             chop_cooldown_time: Cooldown duration in ms
 
         Returns:
-            True if chop was successful (damage dealt)
+            Tuple of (True if chop was successful (damage dealt to at least one weed), Broken tool key or None)
         """
         if self.chop_cooldown > 0:
-            return False
-
-        tile = self.grid.get_tile(self.x, self.y)
-        if tile and tile.tile_type == TileType.WEED and tile.weed_type:
-            from .tools import get_tool
+            return False, None
+        
+        # Get current tool
+        from .tools import get_tool
+        tool = get_tool(self.current_tool)
+        
+        chopped_any = False
+        
+        for dx, dy in tool.reach:
+            target_x = self.x + dx
+            target_y = self.y + dy
+            tile = self.grid.get_tile(target_x, target_y)
             
-            # Get current tool
-            tool = get_tool(self.current_tool)
-            
-            # Calculate regrowth since last damage
-            if tile.weed_health < tile.weed_type.toughness:
-                movements_since_damage = self.movement_count - tile.last_movement_count
-                regrowth_amount = movements_since_damage // tile.weed_type.regrow
-                tile.weed_health = min(tile.weed_type.toughness, tile.weed_health + regrowth_amount)
-            
-            # Deal damage based on tool efficiency
-            tile.weed_health -= tool.efficiency
-            tile.last_movement_count = self.movement_count
-            
+            if tile and tile.tile_type == TileType.WEED and tile.weed_type:
+                # Calculate regrowth since last damage
+                if tile.weed_health < tile.weed_type.toughness:
+                    movements_since_damage = self.movement_count - tile.last_movement_count
+                    regrowth_amount = movements_since_damage // tile.weed_type.regrow
+                    tile.weed_health = min(tile.weed_type.toughness, tile.weed_health + regrowth_amount)
+                
+                # Deal damage based on tool efficiency
+                tile.weed_health -= tool.efficiency
+                tile.last_movement_count = self.movement_count
+                
+                # Check if weed is destroyed
+                if tile.weed_health <= 0:
+                    tile.tile_type = TileType.GRASS
+                    tile.weed_type = None
+                    tile.weed_health = 0.0
+                    
+                chopped_any = True
+                
+        if chopped_any:
+            # Play tool sound if it has one
+            if tool.sound_file and hasattr(self, 'asset_manager'):
+                self.asset_manager.play_sound(tool.sound_file)
+                
             # Increment tool usage counter
-            self.tool_uses += 1
-            
-            # Check if weed is destroyed
-            if tile.weed_health <= 0:
-                tile.tile_type = TileType.GRASS
-                tile.weed_type = None
-                tile.weed_health = 0.0
+            if self.current_tool not in self.tool_uses:
+                self.tool_uses[self.current_tool] = 0
+            self.tool_uses[self.current_tool] += 1
             
             self.chop_cooldown = chop_cooldown_time
-            return True
+            
+            # Check if tool breaks
+            broken_tool = None
+            if tool.longevity > 0 and self.tool_uses[self.current_tool] >= tool.longevity:
+                broken_tool = self.current_tool
+                self.owned_tools.remove(self.current_tool)
+                self.current_tool = 'hand_hoe' # Default back to hand hoe
+            
+            return True, broken_tool
 
-        return False
+        return False, None
 
     def get_chop_cooldown_percent(self):
         """Get chop cooldown progress as percentage
@@ -122,7 +148,11 @@ class Player:
         """
         if self.chop_cooldown <= 0:
             return 0.0
-        return self.chop_cooldown / 1000.0  # Assuming 1000ms cooldown
+            
+        from .tools import get_tool
+        tool = get_tool(self.current_tool)
+        # Using base cooldown for UI percentage calculation
+        return min(1.0, self.chop_cooldown / float(tool.cooldown))
 
     def render(self, surface, tile_size, camera_offset=(0, 0), sprite_manager=None):
         """Render the player to a surface

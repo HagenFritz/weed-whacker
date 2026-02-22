@@ -4,6 +4,8 @@ Player rendering module
 
 import pygame
 
+from ..constants.colors import COOLDOWN_COOLING, COOLDOWN_READY, BAR_BG_DARK
+
 
 class PlayerRenderer:
     """Handles player and cooldown bar rendering"""
@@ -62,7 +64,7 @@ class PlayerRenderer:
             surface.blit(tool_sprite, (tool_x, tool_y))
         
         # Background (dark gray)
-        pygame.draw.rect(surface, (40, 40, 40), (bar_x, bar_y, bar_width, bar_height))
+        pygame.draw.rect(surface, BAR_BG_DARK, (bar_x, bar_y, bar_width, bar_height))
         
         # Get cooldown percentage
         cooldown_percent = player.get_chop_cooldown_percent()
@@ -70,11 +72,11 @@ class PlayerRenderer:
         # Fill bar based on cooldown state
         if cooldown_percent > 0:
             # Red when cooling down
-            fill_color = (200, 50, 50)
+            fill_color = COOLDOWN_COOLING
             fill_width = int(bar_width * (1.0 - cooldown_percent))
         else:
             # Green when ready
-            fill_color = (50, 200, 50)
+            fill_color = COOLDOWN_READY
             fill_width = bar_width
         
         if fill_width > 0:

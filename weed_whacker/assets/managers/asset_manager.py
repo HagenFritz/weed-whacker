@@ -7,6 +7,8 @@ from .weed_manager import WeedManager
 from .player_manager import PlayerManager
 from .tool_manager import ToolManager
 from .object_manager import ObjectManager
+import pygame
+from pathlib import Path
 
 
 class AssetManager:
@@ -26,6 +28,52 @@ class AssetManager:
         self.players = PlayerManager(tile_size)
         self.tools = ToolManager(tile_size)
         self.objects = ObjectManager(tile_size)
+        
+        # Sound dictionary
+        self.sounds = {}
+        self.assets_dir = Path(__file__).parent.parent.parent / 'assets'
+        
+        # Initialize mixer if not already
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+
+    def get_sound(self, sound_file: str):
+        """Get or load a sound file
+        
+        Args:
+            sound_file: Relative path to sound file from weed_whacker directory
+            
+        Returns:
+            pygame.mixer.Sound object or None if failed
+        """
+        if not sound_file:
+            return None
+            
+        if sound_file not in self.sounds:
+            # We assume sound_file is relative to the weed_whacker directory, e.g. 'assets/sounds/scythe.wav'
+            # Adjust path relative to weed_whacker directory
+            full_path = Path(__file__).parent.parent.parent / sound_file
+            if full_path.exists():
+                try:
+                    self.sounds[sound_file] = pygame.mixer.Sound(str(full_path))
+                except pygame.error:
+                    print(f"Failed to load sound: {full_path}")
+                    self.sounds[sound_file] = None
+            else:
+                print(f"Sound file not found: {full_path}")
+                self.sounds[sound_file] = None
+                
+        return self.sounds.get(sound_file)
+
+    def play_sound(self, sound_file: str):
+        """Play a sound file
+        
+        Args:
+            sound_file: Relative path to sound file
+        """
+        sound = self.get_sound(sound_file)
+        if sound:
+            sound.play()
     
     def get_sprite(self, sprite_name):
         """Get a sprite by name from any manager
